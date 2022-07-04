@@ -1,0 +1,14 @@
+web1804-php7:
+  build: .
+  dockerfile: ./1804/Dockerfile
+  environment:
+    - MYSQL_ADMIN_PASS=password
+    - MYSQL_USER_NAME=skandi
+    - MYSQL_USER_DB=skandi
+    - MYSQL_USER_PASS=skandi123
+    - MYSQL_IMPORT_FILE=skandinav-20220329.sql
+  volumes:
+    - ~/develop/skandidev/app:/app
+  ports:
+    - "88:80"
+    - "3000:3306"

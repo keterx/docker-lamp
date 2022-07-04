@@ -28,6 +28,9 @@ RUN add-apt-repository -y ppa:ondrej/php && \
   apt-get update && \
   apt-get -y upgrade && \
   apt-get -y install postfix python3-setuptools wget git apache2 openssl libapache2-mod-fcgid mysql-server pwgen zip unzip curl php5.6 php5.6-fpm php5.6-xdebug php5.6-mysql php5.6-apcu php5.6-gd php5.6-xml php5.6-common php5.6-json php5.6-mbstring php5.6-gettext php5.6-zip php5.6-curl php5.6-cli php5.6-bcmath php5.6-bz2 php5.6-fpm php5.6-gd php5.6-mcrypt php7.4 php7.4-fpm php7.4-xdebug php7.4-mysql php7.4-apcu php7.4-gd php7.4-xml php7.4-common php7.4-json php7.4-mbstring php7.4-gettext php7.4-zip php7.4-curl php7.4-cli php7.4-bcmath php7.4-bz2 php7.4-fpm php7.4-gd php7.4-mcrypt php8.0 php8.0-fpm php8.0-xdebug php8.0-mysql php8.0-apcu php8.0-gd php8.0-xml php8.0-common php8.0-mbstring php8.0-gettext php8.0-zip php8.0-curl php8.0-cli php8.0-bcmath php8.0-bz2 php8.0-fpm php8.0-gd php8.0-mcrypt && \
+  apt-get -y install php7.1 php7.1-fpm php7.1-cli php7.1-common php7.1-json php7.1-dom php7.1-gd php7.1-intl php7.1-curl php7.1-mbstring php7.1-mysql php7.1-mcrypt php7.1-zip && \
+  apt-get -y install php7.1-memcached && \
+  apt-get -y install mc && \
   apt-get -y autoremove && \
   echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
@@ -59,15 +62,56 @@ RUN ln -s /var/www/phpMyAdmin-${PHPMYADMIN_VERSION}-all-languages /var/www/phpmy
 RUN mv /var/www/phpmyadmin/config.sample.inc.php /var/www/phpmyadmin/config.inc.php
 
 # Add composer
-RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
-    php composer-setup.php && \
-    php -r "unlink('composer-setup.php');" && \
+RUN wget https://getcomposer.org/download/2.2.14/composer.phar && \
+    chmod a+x composer.phar && \
     mv composer.phar /usr/local/bin/composer
 
-ENV MYSQL_PASS:-$(pwgen -s 12 1)
+
+# add nvm
+
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+ENV NVM_VERSION v0.33.11
+ENV NODE_VERSION v11.15.0
+ENV NVM_DIR /usr/local/nvm
+RUN mkdir $NVM_DIR
+RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+
+ENV NODE_PATH $NVM_DIR/v$NODE_VERSION/lib/node_modules
+ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+
+RUN echo "source $NVM_DIR/nvm.sh && \
+    nvm install $NODE_VERSION && \
+    nvm alias default $NODE_VERSION && \
+    nvm use default" | bash
+
+RUN nvm -v | bash
+
+RUN nvm install $NODE_VERSION | bash
+RUN nvm alias default $NODE_VERSION | bash
+RUN nvm use default | bash
+
+
+
+RUN npm i --global gulp | bash
+RUN npm i | bash
+
+
+# https://stackoverflow.com/questions/57194851/typeerror-require-extensions-hasownproperty-is-not-a-function-on-running-gulp
+#    npm i --unsafe-perm node-sass@4.12.0 && \
+
+
+#RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
+#    php composer-setup.php && \
+#    php -r "unlink('composer-setup.php');" && \
+#    mv composer.phar /usr/local/bin/composer
+
+#ENV MYSQL_PASS:-$(pwgen -s 12 1)
 # config to enable .htaccess
 ADD supporting_files/apache_default /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
+
+
 #RUN a2enmod actions alias proxy_fcgi fcgid
 #RUN a2enconf php5.6-fpm
 #RUN a2enconf php7.4-fpm
@@ -82,16 +126,19 @@ RUN mkdir -p /app && rm -fr /var/www/html && ln -s /app /var/www/html
 ADD app/ /app
 
 #Environment variables to configure php
-ENV PHP_UPLOAD_MAX_FILESIZE 64M
-ENV PHP_POST_MAX_SIZE 64M
-ENV PHP_VERSION 7.4
+ENV PHP_UPLOAD_MAX_FILESIZE 512M
+ENV PHP_POST_MAX_SIZE 512M
+ENV PHP_VERSION 7.1
 
-RUN wget 'https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_aarch64.tar.gz'
-RUN tar xzf ioncube_loaders_lin_aarch64.tar.gz -C /usr/local
+#RUN wget 'https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_aarch64.tar.gz'
+#RUN tar xzf ioncube_loaders_lin_aarch64.tar.gz -C /usr/local
+
 #RUN mkdir -p /tmp/ioncube
 #RUN tar -xvzf ioncube_loaders_lin_aarch64.tar.gz
 #RUN mv ioncube/ioncube_loader_lin_7.4.so `php-config --extension-dir`
-RUN rm -Rf ioncube_loaders_lin_aarch64.tar.gz
+
+#RUN rm -Rf ioncube_loaders_lin_aarch64.tar.gz
+
 #RUN docker-php-ext-enable ioncube_loader_lin_7.4
 
 # Add volumes for the app and MySql
